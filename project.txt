@@ -1,0 +1,203 @@
+import 'dart:io';
+void main() {
+    stdout.write("Enter the number of processes: ");
+    int n = int.parse(stdin.readLineSync()!);
+    List<int> arrivalTime = List.filled(n, 0);
+    List<int> burstTime = List.filled(n, 0);
+    List<int> priority = List.filled(n, 0);
+
+    for (int i = 0; i < n; i++) {
+        stdout.write("Enter the arrival time for process ${i + 1}: ");
+        arrivalTime[i] = int.parse(stdin.readLineSync()!);
+
+        stdout.write("Enter the burst time for process ${i + 1}: ");
+        burstTime[i] = int.parse(stdin.readLineSync()!);
+
+        stdout.write("Enter the priority for process${i + 1}: ");
+        priority[i] = int.parse(stdin.readLineSync()!);
+    }
+    stdout.write("Enter the time quantum for Round Robin algorithm: ");
+    int timeQuantum = int.parse(stdin.readLineSync()!);
+
+    String priorityScheduling_algorithm = priorityScheduling(arrivalTime, burstTime,priority);
+    print(priorityScheduling_algorithm);
+    String FCFS_algorithm = FCFS(arrivalTime, burstTime, n);
+    print(FCFS_algorithm);
+    String SJF_algorithm = SJF(arrivalTime, burstTime);
+    print(SJF_algorithm);
+    String RR_algorithm = RR(arrivalTime, burstTime, n, timeQuantum);
+    print(RR_algorithm);
+
+}
+
+String priorityScheduling(List<int> arrivalTime, List<int> burstTime, List<int> priority) {
+    int n = arrivalTime.length;
+    List<int> remainingTime = List.from(burstTime);
+    List<int> completionTime = List.filled(n, 0);
+    List<int> turnaroundTime = List.filled(n, 0);
+    List<int> waitingTime = List.filled(n, 0);
+    List<int> executedOrder = [];
+
+    int currentTime = 0;
+    int completedProcesses = 0;
+    while (completedProcesses < n) {
+        int highestPriorityIndex = -1;
+        for (int i = 0; i < n; i++) {
+            if (arrivalTime[i] <= currentTime && remainingTime[i] > 0) {
+                if (highestPriorityIndex == -1 || priority[i] < priority[highestPriorityIndex]) {
+                    highestPriorityIndex = i;
+                }
+            }
+        }
+        if (highestPriorityIndex != -1) {
+            executedOrder.add(highestPriorityIndex);
+            remainingTime[highestPriorityIndex]--;
+
+            if (remainingTime[highestPriorityIndex] == 0) {
+                completedProcesses++;
+                completionTime[highestPriorityIndex] = currentTime + 1;
+                turnaroundTime[highestPriorityIndex] = completionTime[highestPriorityIndex] - arrivalTime[highestPriorityIndex];
+                waitingTime[highestPriorityIndex] = turnaroundTime[highestPriorityIndex] - burstTime[highestPriorityIndex];
+            }
+        }
+        currentTime++;
+    }
+
+    String result = "Order of execution: ${executedOrder.map((id) => "P $ {id + 1}").join(' -> ')}\n";
+    result += "Process\tBurst Time\tPriority\tWaiting Time\tTurnaround Time\n";
+    for (int i = 0; i < executedOrder.length; i++) {
+        int id = executedOrder[i];
+        result += "${id + 1}\t\t\t${burstTime[id]}\t\t\t${priority[id]}\t\t\t${waitingTime[id]}\t\t\t${turnaroundTime[id]}\n";
+    }
+
+    double avgTurnaroundTime = turnaroundTime.reduce((a, b) => a + b) / n;
+    double avgWaitingTime = waitingTime.reduce((a, b) => a + b) / n;
+    result += "Average Turnaround Time: $avgTurnaroundTime\n";
+    result += "Average Waiting Time: $avgWaitingTime\n";
+
+    return result;
+}
+
+
+String FCFS(List<int> arrivalTime, List<int> burstTime, int n) {
+    List<int> completionTime = List.filled(n, 0);
+    List<int> turnaroundTime = List.filled(n, 0);
+    List<int> waitingTime = List.filled(n, 0);
+    int currentTime = 0;
+    for (int i = 0; i < n; i++) {
+        if (arrivalTime[i] > currentTime) {
+            currentTime = arrivalTime[i];
+        }
+        completionTime[i] = currentTime + burstTime[i];
+        turnaroundTime[i] = completionTime[i] - arrivalTime[i];
+        waitingTime[i] = turnaroundTime[i] - burstTime[i];
+        currentTime = completionTime[i];
+    }
+    String output = "Process\tArrival Time\tBurst Time\tCompletion Time\tTurnaround Time\tWaiting Time\n";
+    for (int i = 0; i < n; i++) {
+        output += "${i + 1}\t\t\t\t${arrivalTime[i]}\t\t\t${burstTime[i]}\t\t\t${completionTime[i]}\t\t\t\t${turnaroundTime[i]}\t\t\t\t${waitingTime[i]}\n";
+    }
+    double avgTurnaroundTime = turnaroundTime.reduce((a, b) => a + b) / n;
+    double avgWaitingTime = waitingTime.reduce((a, b) => a + b) / n;
+    output += "Average Turnaround Time: $avgTurnaroundTime\n";
+    output += "Average Waiting Time: $avgWaitingTime";
+    return output;
+}
+
+String SJF(List<int> arrivalTime, List<int> burstTime) {
+    int n = arrivalTime.length;
+
+    List<bool> completed = List.filled(n, false);
+    List<int> completionTime = List.filled(n, 0);
+    List<int> turnaroundTime = List.filled(n, 0);
+    List<int> waitingTime = List.filled(n, 0);
+    List<int> executedOrder = [];
+    int currentTime = 0;
+    int completedProcesses = 0;
+
+    while(completedProcesses < n) {
+        int shortestJobIndex = -1;
+        int shortestJobTime = 9999999;
+
+        for (int i = 0; i < n; i++) {
+            if (!completed[i] && arrivalTime[i]<= currentTime && burstTime[i] < shortestJobTime) {
+                shortestJobIndex = i;
+                shortestJobTime = burstTime[i];
+            }
+        }
+
+        if (shortestJobIndex == -1) {
+            currentTime++;
+            continue;
+        }
+
+        completed[shortestJobIndex] = true;
+        completedProcesses++;
+
+        completionTime[shortestJobIndex] = currentTime + burstTime[shortestJobIndex];
+        turnaroundTime[shortestJobIndex] = completionTime[shortestJobIndex] - arrivalTime[shortestJobIndex];
+        waitingTime[shortestJobIndex] = turnaroundTime[shortestJobIndex] - burstTime[shortestJobIndex];
+
+        currentTime = completionTime[shortestJobIndex];
+
+        executedOrder.add(shortestJobIndex); // add the ID of the executed process to the list
+    }
+
+    String result ="Order of execution: ${executedOrder.map((id) => "P$ {id+1}").join(' -> ')}\n"; // print the order of execution
+
+    result += "Process\tBurst Time\tWaiting Time\tTurnaround Time\n";
+    for (int i = 0; i < executedOrder.length; i++) {
+        int id = executedOrder[i];
+        result += "${id + 1}\t\t\t${burstTime[id]}\t\t\t${waitingTime[id]}\t\t\t${turnaroundTime[id]}\n";
+    }
+
+    double avgTurnaroundTime =turnaroundTime.reduce((a, b) => a + b) / n;
+    double avgWaitingTime = waitingTime.reduce((a, b) => a + b) / n;
+    result += "Average Turnaround Time: $avgTurnaroundTime\n";
+    result += "Average Waiting Time: $avgWaitingTime\n";
+    return result;
+}
+
+String RR(List<int> arrivalTime, List<int> burstTime,int n , int timeQuantum )  {
+    List<int> completionTime = List.filled(n, 0);
+    List<int> turnaroundTime = List.filled(n, 0);
+    List<int> waitingTime = List.filled(n, 0);
+    List<int> executedOrder = [];
+    List<int> remainingTime = List.from(burstTime);
+    List<bool> completed = List.filled(n, false);
+
+    int currentTime = 0;
+    while (completed.contains(false)) {
+        for (int i = 0; i < n; i++) {
+            if (remainingTime[i] > 0 && arrivalTime[i] <= currentTime) {
+                if (remainingTime[i] <= timeQuantum) {
+                    currentTime += remainingTime[i];
+                    remainingTime[i] = 0;
+                    completed[i] = true;
+                    executedOrder.add(i);
+                    completionTime[i] = currentTime;
+                    turnaroundTime[i] = completionTime[i] - arrivalTime[i];
+                    waitingTime[i] = turnaroundTime[i] - burstTime[i];
+                } else {
+                    currentTime += timeQuantum;
+                    remainingTime[i] -= timeQuantum;
+                    executedOrder.add(i);
+                }
+            }
+        }
+    }
+
+    String result = "Order of execution: ${executedOrder.map((id) => "P $ {id+1}").join(' -> ')}\n"; // print the order of execution
+
+    result +="Process\tBurst Time\tWaiting Time\tTurnaround Time\n";
+    for (int i = 0; i < executedOrder.length; i++) {
+        int id = executedOrder[i];
+        result +="${id + 1}\t\t\t${burstTime[id]}\t\t\t${waitingTime[id]}\t\t\t${turnaroundTime[id]}\n";
+    }
+
+    double avgTurnaroundTime = turnaroundTime.reduce((a, b) => a + b) / n;
+    double avgWaitingTime = waitingTime.reduce((a, b) => a + b) / n;
+    result += "Average Turnaround Time: $avgTurnaroundTime\n";
+    result +="Average Waiting Time: $avgWaitingTime\n";
+    return result;
+}
